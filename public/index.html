@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Logger</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="app-header">
+      <div class="icon-wrap">💸</div>
+      <h1>Expense Logger</h1>
+      <p class="subtitle">Quickly log and keep track of your daily expenses</p>
+    </header>
+
+    <main>
+      <div class="card form-card">
+        <h2>Log New Expense</h2>
+        <form id="expenseForm">
+          <div class="form-group">
+            <label for="title">Expense Title / Description *</label>
+            <input 
+              type="text" 
+              id="title" 
+              name="title" 
+              placeholder="e.g., Grocery shopping, Coffee, Books" 
+              required 
+            />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="amount">Amount ($) *</label>
+              <input 
+                type="number" 
+                id="amount" 
+                name="amount" 
+                step="0.01" 
+                min="0.01" 
+                placeholder="0.00" 
+                required 
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="category">Category</label>
+              <select id="category" name="category">
+                <option value="Food & Dining">🍔 Food & Dining</option>
+                <option value="Groceries">🛒 Groceries</option>
+                <option value="Transport">🚗 Transport</option>
+                <option value="Utilities">💡 Utilities</option>
+                <option value="Entertainment">🎬 Entertainment</option>
+                <option value="Shopping">🛍️ Shopping</option>
+                <option value="Healthcare">💊 Healthcare</option>
+                <option value="General" selected>📦 General</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="expenseDate">Date</label>
+            <input type="date" id="expenseDate" name="expenseDate" />
+          </div>
+
+          <button type="submit" id="submitBtn" class="btn primary-btn">
+            <span>💾 Save Expense</span>
+          </button>
+        </form>
+
+        <div id="statusMessage" class="status-message" aria-live="polite"></div>
+      </div>
+
+      <div class="card list-card">
+        <div class="list-header">
+          <h2>Logged Expenses</h2>
+          <button id="refreshBtn" class="btn secondary-btn" title="Refresh List">🔄 Refresh</button>
+        </div>
+        <div id="expensesContainer" class="expenses-container">
+          <p class="empty-state">Loading expenses...</p>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>Expense Logger &bull; Node.js + Express + MySQL</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

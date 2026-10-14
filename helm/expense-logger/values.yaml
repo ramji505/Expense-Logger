@@ -1,0 +1,28 @@
+﻿replicaCount: 2
+
+image:
+  repository: ramji55/expense-logger-app
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 3000
+  nodePort: 30080
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env:
+  PORT: 3000
+  DB_HOST: "expense-logger-db"
+  DB_PORT: 3306
+  DB_USER: "expense_user"
+  DB_PASSWORD: "expense_password"
+  DB_NAME: "expense_logger_db"

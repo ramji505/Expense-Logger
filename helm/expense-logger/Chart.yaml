@@ -1,0 +1,6 @@
+﻿apiVersion: v2
+name: expense-logger
+description: Universal Helm deployment for expense-logger
+type: application
+version: 0.1.0
+appVersion: "latest"

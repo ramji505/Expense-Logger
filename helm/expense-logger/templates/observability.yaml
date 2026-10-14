@@ -1,0 +1,39 @@
+﻿apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: expense-logger-monitor
+  namespace: ns-expense-logger
+  labels:
+    release: prometheus-stack
+    app: expense-logger
+spec:
+  selector:
+    matchLabels:
+      app: expense-logger-app
+  namespaceSelector:
+    matchNames:
+      - ns-expense-logger
+  endpoints:
+    - port: tcp-80
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: expense-logger-alerts
+  namespace: ns-expense-logger
+  labels:
+    release: prometheus-stack
+    app: expense-logger
+spec:
+  groups:
+    - name: expense-logger.rules
+      rules:
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total{namespace="ns-expense-logger"}[5m]) * 60 > 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Expense Logger Pod is restarting"

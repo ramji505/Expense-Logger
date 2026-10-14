@@ -1,0 +1,47 @@
+﻿apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: expense-logger-grafana-dashboard
+  namespace: ns-expense-logger
+  labels:
+    grafana_dashboard: "1"
+    app: expense-logger
+data:
+  expense-logger-dashboard.json: |-
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "panels": [
+        {
+          "title": "CPU Usage (Cores)",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"ns-expense-logger\", container!=\"\"}[2m])) by (pod)",
+              "legendFormat": "CPU {{`{{pod}}`}}"
+            }
+          ]
+        },
+        {
+          "title": "Memory Usage (MB)",
+          "type": "timeseries",
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"ns-expense-logger\", container!=\"\"}) by (pod) / 1024 / 1024",
+              "legendFormat": "RAM {{`{{pod}}`}} (MB)"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 38,
+      "title": "Expense Logger - Operational Health",
+      "tags": ["kubernetes", "expense-logger"],
+      "timezone": "browser"
+    }
