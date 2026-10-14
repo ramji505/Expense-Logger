@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: expense-logger
+  namespace: argocd
+  finalizers:
+    # Ensures resources are deleted cleanly if the Argo CD app is deleted
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    # 1. Your GitHub Repository URL
+    repoURL: https://github.com/ramjidabhi/Expense-Logger.git
+    # 2. Branch or Git tag to track
+    targetRevision: main
+    # 3. Path inside the Git repository where your Helm chart lives
+    path: helm/expense-logger
+
+    helm:
+      releaseName: expense-logger
+      valueFiles:
+        - values.yaml
+      parameters:
+        - name: monitoring.enabled
+          value: "true"
+
+  destination:
+    # In-cluster Kubernetes API server
+    server: https://kubernetes.default.svc
+    # Target namespace where the app, ServiceMonitor, and dashboard are deployed
+    namespace: ns-expense-logger
+
+  syncPolicy:
+    automated:
+      # Automatically deploy Git changes without clicking 'Sync' in the UI
+      prune: true     # Deletes K8s resources if you delete them from Git
+      selfHeal: true  # Reverts manual changes in the cluster to match Git
+    syncOptions:
+      - CreateNamespace=true  # Auto-creates ns-expense-logger if missing
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
