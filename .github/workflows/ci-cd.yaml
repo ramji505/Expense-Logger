@@ -1,0 +1,118 @@
+name: CI/CD Pipeline - Build, Scan & GitOps Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'helm/**/values.yaml'    # Prevents infinite commit loops
+      - 'README.md'
+      - '.gitignore'
+
+jobs:
+  # ==========================================
+  # JOB 1: Test & Lint
+  # ==========================================
+  test:
+    name: Run Application Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Unit Tests
+        run: |
+          # If tests exist in package.json, run them; otherwise skip gracefully
+          npm test --if-present
+
+  # ==========================================
+  # JOB 2: Build, Scan & Push Container
+  # ==========================================
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.tag }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Generate Short Git SHA Tag
+        id: set_tag
+        run: echo "tag=$(echo ${GITHUB_SHA::7})" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker Image Locally for Scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/expense-logger-app:${{ steps.set_tag.outputs.tag }}
+
+      # Security Scanning with Trivy
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/expense-logger-app:${{ steps.set_tag.outputs.tag }}
+          format: 'table'
+          exit-code: '0' # Use '1' in strict production to block CRITICAL CVEs
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Container to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/expense-logger-app:${{ steps.set_tag.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/expense-logger-app:latest
+
+  # ==========================================
+  # JOB 3: GitOps Delivery (Update Helm Manifest)
+  # ==========================================
+  gitops-deploy:
+    name: Update Helm Values & Trigger Argo CD
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code with Git Credentials
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Helm Image Tag in values.yaml
+        run: |
+          NEW_TAG="${{ needs.build-and-push.outputs.image_tag }}"
+          echo "Updating image.tag to $NEW_TAG inside helm/expense-logger/values.yaml"
+          
+          # Safely replace image.tag value using sed
+          sed -i -E "s/(tag:\s*\")[^\"]+(\")/\1$NEW_TAG\2/" helm/expense-logger/values.yaml
+
+      - name: Commit & Push New Image Tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add helm/expense-logger/values.yaml
+          git commit -m "ci(gitops): bump image tag to ${{ needs.build-and-push.outputs.image_tag }} [skip ci]" || exit 0
+          git push origin main
