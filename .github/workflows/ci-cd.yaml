@@ -96,6 +96,8 @@ jobs:
     name: Update Helm Values & Trigger Argo CD
     needs: build-and-push
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code with Git Credentials
         uses: actions/checkout@v4
